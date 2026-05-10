@@ -167,6 +167,7 @@ def chat_test(
     message: str = typer.Option("Hello! Please reply with one short sentence.", "--message", "-m", help="Test message"),
     config: Path = typer.Option(Path(DEFAULT_CONFIG_FILE), "--config", help="Config yaml path"),
 ) -> None:
+    load_dotenv()
     cfg = load_config(config.resolve())
     result = run_remote_chat(config=cfg, message=message)
     console.print(json.dumps(result, indent=2, ensure_ascii=False))

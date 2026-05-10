@@ -8,9 +8,11 @@ from autoyolo.models import RunConfig
 
 
 def run_remote_chat(*, config: RunConfig, message: str) -> dict:
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    api_key = os.getenv("DEEPSEEK_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is empty. Please set it before remote chat test.")
+        raise RuntimeError(
+            "API key is empty. Set OPENAI_API_KEY (or DEEPSEEK_API_KEY) in environment/.env before chat-test."
+        )
 
     client = OpenAI(api_key=api_key, base_url=config.openai_base_url)
     response = client.chat.completions.create(

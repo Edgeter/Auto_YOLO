@@ -7,7 +7,6 @@ import json
 import os
 import re
 import tempfile
-from urllib import error, request
 from pathlib import Path
 from typing import Any
 
@@ -285,125 +284,6 @@ def _normalize_vlm_detections(payload: dict[str, Any], classes: list[str], image
             confidence=min(max(conf, 0.0), 1.0),
         )
         labels.append(label)
-    return labels
-
-
-def _extract_ollama_content(payload: dict[str, Any]) -> str:
-    message = payload.get("message")
-    if not isinstance(message, dict):
-        return ""
-    content = message.get("content", "")
-    return content if isinstance(content, str) else ""
-
-
-def _find_coord_tuples(text: str) -> list[tuple[float, float, float, float]]:
-    tuples: list[tuple[float, float, float, float]] = []
-
-    bracket_pattern = re.compile(
-        r"\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]"
-    )
-    for match in bracket_pattern.finditer(text):
-        x1, y1, x2, y2 = [float(v) for v in match.groups()]
-        tuples.append((x1, y1, x2, y2))
-
-    if tuples:
-        return tuples
-
-    kv_pattern = re.compile(
-        r"x1\s*[:=]\s*(-?\d+(?:\.\d+)?).*?y1\s*[:=]\s*(-?\d+(?:\.\d+)?).*?x2\s*[:=]\s*(-?\d+(?:\.\d+)?).*?y2\s*[:=]\s*(-?\d+(?:\.\d+)?)",
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    for match in kv_pattern.finditer(text):
-        x1, y1, x2, y2 = [float(v) for v in match.groups()]
-        tuples.append((x1, y1, x2, y2))
-
-    return tuples
-
-
-def _normalize_ollama_output(content: str, classes: list[str], image_w: int, image_h: int) -> list[BoxLabel]:
-    class_map = {name: idx for idx, name in enumerate(classes)}
-    class_map.update({name.lower(): idx for idx, name in enumerate(classes)})
-    labels: list[BoxLabel] = []
-
-    stripped = content.strip()
-    if stripped:
-        try:
-            parsed = json.loads(stripped)
-        except json.JSONDecodeError:
-            parsed = None
-
-        if isinstance(parsed, list):
-            for item in parsed:
-                if isinstance(item, list) and len(item) == 5:
-                    cls_raw, x1, y1, x2, y2 = item
-                    cls_key = str(cls_raw).strip()
-                    class_id = class_map.get(cls_key)
-                    if class_id is None:
-                        class_id = class_map.get(cls_key.lower())
-                    if class_id is None:
-                        continue
-                    try:
-                        x1f, y1f, x2f, y2f = float(x1), float(y1), float(x2), float(y2)
-                    except (TypeError, ValueError):
-                        continue
-                    x1f = min(max(x1f, 0.0), float(image_w))
-                    y1f = min(max(y1f, 0.0), float(image_h))
-                    x2f = min(max(x2f, 0.0), float(image_w))
-                    y2f = min(max(y2f, 0.0), float(image_h))
-                    if x2f <= x1f or y2f <= y1f:
-                        continue
-                    labels.append(
-                        BoxLabel(
-                            class_id=class_id,
-                            x_center=((x1f + x2f) / 2.0) / image_w,
-                            y_center=((y1f + y2f) / 2.0) / image_h,
-                            width=(x2f - x1f) / image_w,
-                            height=(y2f - y1f) / image_h,
-                            confidence=0.7,
-                        )
-                    )
-                elif isinstance(item, list) and len(item) == 4:
-                    try:
-                        x1f, y1f, x2f, y2f = [float(v) for v in item]
-                    except (TypeError, ValueError):
-                        continue
-                    x1f = min(max(x1f, 0.0), float(image_w))
-                    y1f = min(max(y1f, 0.0), float(image_h))
-                    x2f = min(max(x2f, 0.0), float(image_w))
-                    y2f = min(max(y2f, 0.0), float(image_h))
-                    if x2f <= x1f or y2f <= y1f:
-                        continue
-                    labels.append(
-                        BoxLabel(
-                            class_id=0,
-                            x_center=((x1f + x2f) / 2.0) / image_w,
-                            y_center=((y1f + y2f) / 2.0) / image_h,
-                            width=(x2f - x1f) / image_w,
-                            height=(y2f - y1f) / image_h,
-                            confidence=0.6,
-                        )
-                    )
-            if labels:
-                return labels
-
-    for x1f, y1f, x2f, y2f in _find_coord_tuples(content):
-        x1f = min(max(x1f, 0.0), float(image_w))
-        y1f = min(max(y1f, 0.0), float(image_h))
-        x2f = min(max(x2f, 0.0), float(image_w))
-        y2f = min(max(y2f, 0.0), float(image_h))
-        if x2f <= x1f or y2f <= y1f:
-            continue
-        labels.append(
-            BoxLabel(
-                class_id=0,
-                x_center=((x1f + x2f) / 2.0) / image_w,
-                y_center=((y1f + y2f) / 2.0) / image_h,
-                width=(x2f - x1f) / image_w,
-                height=(y2f - y1f) / image_h,
-                confidence=0.55,
-            )
-        )
-
     return labels
 
 
@@ -756,123 +636,6 @@ def _run_local_qwen_vl(
     }
 
 
-def _run_ollama_vlm(
-    *,
-    config: RunConfig,
-    images: list[Path],
-    classes: list[str],
-    console: Console,
-    label_targets: dict[Path, Path] | None = None,
-) -> dict:
-    images_dir = config.abs_path(config.images_dir)
-    labels_dir = config.abs_path(config.labels_dir)
-    endpoint = f"{config.ollama_base_url.rstrip('/')}/api/chat"
-
-    total_boxes = 0
-    with Progress(
-        TextColumn("[cyan]Working[/cyan]"),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("{task.completed}/{task.total}"),
-        TimeElapsedColumn(),
-        TimeRemainingColumn(),
-        console=console,
-        transient=False,
-    ) as progress:
-        task_id = progress.add_task("Ollama VLM pre-annotation", total=len(images))
-        for idx, image_path in enumerate(images, start=1):
-            from PIL import Image
-
-            image = Image.open(image_path)
-            image_w, image_h = image.size
-            image_b64 = _read_image_as_base64(image_path)
-
-            prompt = (
-                "Locate all class instances in the image. "
-                "Return JSON array only, no explanation. "
-                "Preferred format: [[label, x1, y1, x2, y2], ...]. "
-                "Alternative accepted format: [[x1, y1, x2, y2], ...]. "
-                "Coordinates must be pixel values in original image size. "
-                f"Class list: {classes}. Image size: {image_w}x{image_h}."
-            )
-
-            payload = {
-                "model": config.ollama_model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt,
-                        "images": [image_b64],
-                    }
-                ],
-                "stream": False,
-            }
-
-            content = ""
-            last_error = ""
-            for _ in range(max(1, config.ollama_max_retries + 1)):
-                try:
-                    req = request.Request(
-                        endpoint,
-                        data=json.dumps(payload).encode("utf-8"),
-                        headers={"Content-Type": "application/json"},
-                        method="POST",
-                    )
-                    with request.urlopen(req, timeout=max(20, int(config.ollama_timeout_sec))) as resp:
-                        body = resp.read().decode("utf-8", errors="replace")
-                    obj = json.loads(body)
-                    content = _extract_ollama_content(obj)
-                    break
-                except Exception as exc:
-                    if isinstance(exc, error.HTTPError):
-                        try:
-                            err_body = exc.read().decode("utf-8", errors="replace")
-                        except Exception:
-                            err_body = ""
-                        snippet = err_body.strip().replace("\n", " ")
-                        if len(snippet) > 220:
-                            snippet = snippet[:220] + "..."
-                        last_error = f"HTTP {exc.code}: {snippet or str(exc)}"
-                    else:
-                        last_error = str(exc)
-
-            labels = _normalize_ollama_output(content, classes, image_w, image_h)
-            if not content and last_error:
-                raise RuntimeError(
-                    f"Ollama API call failed for {image_path.name}: {last_error}"
-                )
-            if not labels:
-                snippet = (content or last_error or "").strip().replace("\n", " ")
-                if len(snippet) > 220:
-                    snippet = snippet[:220] + "..."
-                raise RuntimeError(
-                    f"Ollama response has no usable coordinates for {image_path.name}. "
-                    f"Raw snippet: {snippet}"
-                )
-
-            label_file = label_targets.get(image_path) if label_targets else yolo_label_path(image_path, labels_dir, images_dir)
-            write_yolo_labels(label_file, labels)
-            total_boxes += len(labels)
-
-            progress.update(
-                task_id,
-                advance=1,
-                description=f"Ollama VLM pre-annotation | last={image_path.name} | boxes={len(labels)}",
-            )
-            if idx % 10 == 0 or idx == len(images):
-                console.print(
-                    f"[cyan]Checkpoint:[/cyan] {idx}/{len(images)} images, accumulated boxes={total_boxes}"
-                )
-
-    return {
-        "label_files_written": len(images),
-        "detector_backend": config.detector_backend,
-        "total_boxes": total_boxes,
-        "model_id": config.ollama_model,
-        "device": "ollama_local",
-    }
-
-
 def _run_vlm_api(
     *,
     config: RunConfig,
@@ -1001,21 +764,6 @@ def run_preannotation(
 
     if config.detector_backend == "local_qwen_vl":
         report = _run_local_qwen_vl(
-            config=config,
-            images=images,
-            classes=classes,
-            console=console,
-            label_targets=label_targets,
-        )
-        if label_targets:
-            report["label_map"] = {str(k): str(v) for k, v in label_targets.items()}
-        console.print(
-            f"[green]Pre-annotation complete.[/green] Wrote {report['label_files_written']} label files."
-        )
-        return report
-
-    if config.detector_backend == "ollama_vlm":
-        report = _run_ollama_vlm(
             config=config,
             images=images,
             classes=classes,

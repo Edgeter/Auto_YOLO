@@ -12,7 +12,7 @@ opencode_runner_args: opencode run
 opencode_timeout_sec: 180
 opencode_fallback_on_openai_error: true
 gpt_prompt: Focus on clear visible objects only. Ignore uncertain tiny objects.
-detector_backend: ollama_vlm
+detector_backend: local_qwen_vl
 box_threshold: 0.29243500000000006
 text_threshold: 0.25682625000000003
 nms_iou_threshold: 0.5599999999999999
@@ -25,10 +25,6 @@ vlm_model: cch/gpt-5.4
 vlm_api_key_env: VLM_API_KEY
 vlm_max_retries: 2
 vlm_timeout_sec: 90
-ollama_base_url: http://localhost:11434
-ollama_model: qwen2.5vl:3b
-ollama_max_retries: 2
-ollama_timeout_sec: 90
 local_qwen_model_path: ./models/Qwen2.5-VL-3B-Instruct
 local_qwen_device: cuda
 local_qwen_max_image_side: 640

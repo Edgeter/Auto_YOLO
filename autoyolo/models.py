@@ -30,7 +30,7 @@ class RunConfig(BaseModel):
     opencode_timeout_sec: int = 180
     opencode_fallback_on_openai_error: bool = True
     gpt_prompt: str = ""
-    detector_backend: Literal["mock", "grounding_dino", "vlm_api", "ollama_vlm", "local_qwen_vl"] = "mock"
+    detector_backend: Literal["mock", "grounding_dino", "vlm_api", "local_qwen_vl"] = "mock"
     box_threshold: float = 0.35
     text_threshold: float = 0.25
     nms_iou_threshold: float = 0.6
@@ -43,10 +43,6 @@ class RunConfig(BaseModel):
     vlm_api_key_env: str = "VLM_API_KEY"
     vlm_max_retries: int = 2
     vlm_timeout_sec: int = 90
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen2.5vl:3b"
-    ollama_max_retries: int = 2
-    ollama_timeout_sec: int = 90
     local_qwen_model_path: str = "D:/AI_Models/ModelScope/models/Qwen/Qwen2___5-VL-3B-Instruct"
     local_qwen_device: str = "cuda"
     local_qwen_max_image_side: int = 640

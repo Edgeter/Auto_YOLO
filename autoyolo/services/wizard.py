@@ -38,8 +38,8 @@ def run_wizard(project_root: Path, console: Console) -> RunConfig:
         default="Focus on clear visible objects only. Ignore uncertain tiny objects.",
     )
 
-    detector_backend = typer.prompt("Detector backend (mock/grounding_dino/vlm_api/ollama_vlm/local_qwen_vl)", default="mock").strip().lower()
-    if detector_backend not in {"mock", "grounding_dino", "vlm_api", "ollama_vlm", "local_qwen_vl"}:
+    detector_backend = typer.prompt("Detector backend (mock/grounding_dino/vlm_api/local_qwen_vl)", default="mock").strip().lower()
+    if detector_backend not in {"mock", "grounding_dino", "vlm_api", "local_qwen_vl"}:
         detector_backend = "mock"
 
     grounding_dino_model_id = "IDEA-Research/grounding-dino-base"
@@ -63,12 +63,6 @@ def run_wizard(project_root: Path, console: Console) -> RunConfig:
         vlm_base_url = typer.prompt("VLM base URL", default="https://api.hanbbq.top/v1")
         vlm_model = typer.prompt("VLM model", default="cch/gpt-5.4")
         vlm_api_key_env = typer.prompt("VLM key env var", default="VLM_API_KEY")
-
-    ollama_base_url = "http://localhost:11434"
-    ollama_model = "qwen2.5vl:3b"
-    if detector_backend == "ollama_vlm":
-        ollama_base_url = typer.prompt("Ollama base URL", default="http://localhost:11434")
-        ollama_model = typer.prompt("Ollama model", default="qwen2.5vl:3b")
 
     local_qwen_model_path = "D:/AI_Models/ModelScope/models/Qwen/Qwen2___5-VL-3B-Instruct"
     local_qwen_device = "cuda"
@@ -105,8 +99,6 @@ def run_wizard(project_root: Path, console: Console) -> RunConfig:
         vlm_base_url=vlm_base_url,
         vlm_model=vlm_model,
         vlm_api_key_env=vlm_api_key_env,
-        ollama_base_url=ollama_base_url,
-        ollama_model=ollama_model,
         local_qwen_model_path=local_qwen_model_path,
         local_qwen_device=local_qwen_device,
         local_qwen_max_image_side=local_qwen_max_image_side,
