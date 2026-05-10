@@ -73,7 +73,7 @@ Notes:
 ## 1) Install
 
 ```bash
-cd C:\Users\Lenovo\Desktop\Auto_YOLO
+cd <path-to>/Auto_YOLO
 python -m venv .venv
 .venv\Scripts\activate
 pip install -e .

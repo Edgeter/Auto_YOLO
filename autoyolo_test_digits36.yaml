@@ -1,14 +1,14 @@
 profile_name: default
-project_root: C:\Users\Lenovo\Desktop\Auto_YOLO
-images_dir: C:\Users\Lenovo\Desktop\Auto_YOLO\images
-labels_dir: C:\Users\Lenovo\Desktop\Auto_YOLO\labels
-reports_dir: C:\Users\Lenovo\Desktop\Auto_YOLO\reports
-classes_file: C:\Users\Lenovo\Desktop\Auto_YOLO\classes_digits.txt
+project_root: .
+images_dir: ./images
+labels_dir: ./labels
+reports_dir: ./reports
+classes_file: ./classes_digits.txt
 llm_provider: openai
 llm_model: cch/gpt-5.4
 openai_base_url: https://api.hanbbq.top/v1
-opencode_executable: C:\Users\Lenovo\AppData\Roaming\npm\opencode.cmd
-opencode_runner_args: run
+opencode_executable: npx
+opencode_runner_args: opencode run
 opencode_timeout_sec: 180
 opencode_fallback_on_openai_error: true
 gpt_prompt: Detect digits only (0-9). Ignore symbols and background noise.
@@ -29,7 +29,7 @@ ollama_base_url: http://localhost:11434
 ollama_model: qwen2.5vl:3b
 ollama_max_retries: 2
 ollama_timeout_sec: 90
-local_qwen_model_path: D:/AI_Models/ModelScope/models/Qwen/Qwen2___5-VL-3B-Instruct
+local_qwen_model_path: ./models/Qwen2.5-VL-3B-Instruct
 local_qwen_device: cuda
 local_qwen_max_image_side: 640
 local_qwen_max_new_tokens: 96

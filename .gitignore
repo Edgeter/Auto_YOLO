@@ -5,6 +5,7 @@ __pycache__/
 .env
 reports/
 labels/
+SESSION_SUMMARY.md
 
 # Packaging/build
 *.egg-info/
