@@ -5,8 +5,8 @@ labels_dir: ./labels
 reports_dir: ./reports
 classes_file: ./classes_digits.txt
 llm_provider: openai
-llm_model: cch/gpt-5.4
-openai_base_url: https://api.hanbbq.top/v1
+llm_model: deepseek-v4-pro
+openai_base_url: https://api.deepseek.com
 opencode_executable: npx
 opencode_runner_args: opencode run
 opencode_timeout_sec: 180

@@ -23,14 +23,14 @@ class RunConfig(BaseModel):
     reports_dir: Path = Path("reports")
     classes_file: Path = Path("classes.txt")
     llm_provider: Literal["mock", "openai", "opencode"] = "mock"
-    llm_model: str = "gpt-4o-mini"
-    openai_base_url: str = "https://api.hanbbq.top/v1"
+    llm_model: str = "deepseek-v4-pro"
+    openai_base_url: str = "https://api.deepseek.com"
     opencode_executable: str = "npx"
     opencode_runner_args: str = "opencode run"
     opencode_timeout_sec: int = 180
     opencode_fallback_on_openai_error: bool = True
     gpt_prompt: str = ""
-    detector_backend: Literal["mock", "grounding_dino", "vlm_api", "local_qwen_vl"] = "mock"
+    detector_backend: Literal["mock", "grounding_dino", "vlm_api", "local_qwen_vl"] = "local_qwen_vl"
     box_threshold: float = 0.35
     text_threshold: float = 0.25
     nms_iou_threshold: float = 0.6

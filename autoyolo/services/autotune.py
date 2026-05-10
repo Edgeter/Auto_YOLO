@@ -103,7 +103,8 @@ def _normalize_objective(raw: dict[str, Any], fallback_profile: str) -> dict[str
 
 
 def _build_objective_via_openai(config: RunConfig, profile: str, classes: list[str]) -> dict[str, Any]:
-    client = OpenAI(base_url=config.openai_base_url or os.getenv("OPENAI_BASE_URL"))
+    api_key = os.getenv("DEEPSEEK_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+    client = OpenAI(api_key=api_key or None, base_url=config.openai_base_url or os.getenv("OPENAI_BASE_URL"))
     prompt = (
         "Given dataset profile and class names, build tuning objective for detector pre-annotation. "
         "Return strict JSON with key 'metrics' (list). Each metric item: "

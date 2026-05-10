@@ -122,7 +122,7 @@ def _remote_generate_prompt_bundle(
     user_prompt: str,
     console: Console,
 ) -> tuple[str, str] | None:
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    api_key = os.getenv("DEEPSEEK_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
         return None
 
@@ -181,8 +181,22 @@ def _generate_prompt_bundle(
     if remote is not None:
         console.print("[green]Prompt bundle generated via remote API.[/green]")
         return remote
-    console.print("[yellow]Remote prompt API unavailable, fallback to local model.[/yellow]")
-    return _local_generate_prompt_bundle(config, classes, images_dir, user_prompt, console)
+    console.print("[yellow]Remote prompt API unavailable, fallback to deterministic template prompt.[/yellow]")
+    class_text = ", ".join(classes)
+    en = (
+        "Detect objects from the given class list in this image set. "
+        f"Class list: [{class_text}]. "
+        f"Task intent: {user_prompt.strip()}. "
+        "Output must be strict and detection-focused: ignore tiny targets under 12px unless critical, "
+        "prefer a single class per object even in overlap, and mark uncertain objects for human review."
+    ).strip()
+    zh = (
+        "从给定类别列表中检测目标。"
+        f"任务意图：{user_prompt.strip()}。"
+        "要求：除非关键否则忽略小于12像素的小目标；即使重叠也尽量每个对象只给一个类别；"
+        "不确定目标标记为人工复核。"
+    )
+    return en, zh
 
 
 def _optimize_prompt(config: RunConfig, classes: list[str], images_dir: Path, user_prompt: str) -> str:
@@ -313,6 +327,10 @@ def create_task_profile(*, base_config: RunConfig, base_config_path: Path, conso
         for line in classes_file.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    if not classes:
+        raise RuntimeError(
+            f"classes_file is empty: {classes_file}. Please add at least one class before refining prompt."
+        )
 
     optimized, optimized_zh = _generate_prompt_bundle(base_config, classes, images_dir, user_prompt, console)
     while True:
@@ -373,6 +391,36 @@ def refine_task_prompt(*, task_config_path: Path, console: Console) -> Path:
     payload = yaml.safe_load(task_config_path.read_text(encoding="utf-8")) or {}
     cfg = RunConfig.model_validate(payload)
 
+    images_dir = Path(str(payload.get("images_dir", cfg.images_dir)))
+    classes_file = _normalize_input_path(str(payload.get("classes_file", cfg.classes_file)))
+    image_files = [
+        p
+        for p in sorted(images_dir.rglob("*"))
+        if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+    ] if images_dir.exists() and images_dir.is_dir() else []
+    classes_preview: list[str] = []
+    if classes_file.exists() and classes_file.is_file():
+        classes_preview = [
+            line.strip()
+            for line in classes_file.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+
+    console.print("\n[bold cyan]Task context before refine[/bold cyan]")
+    console.print(f"- task file: {task_config_path}")
+    console.print(f"- images_dir: {images_dir}")
+    console.print(f"- images count: {len(image_files)}")
+    console.print(f"- classes_file: {classes_file}")
+    console.print(f"- classes: {classes_preview if classes_preview else '<empty>'}")
+
+    if not typer.confirm("Use current images/classes settings for this refinement?", default=True):
+        images_dir = _normalize_input_path(typer.prompt("Images directory path"))
+        classes_file = _normalize_input_path(typer.prompt("classes file path"))
+        if not classes_file.exists() or not classes_file.is_file():
+            raise RuntimeError(f"classes file not found: {classes_file}")
+        payload["images_dir"] = str(images_dir)
+        payload["classes_file"] = str(classes_file)
+
     old_prompt_en = str(payload.get("gpt_prompt", cfg.gpt_prompt or "")).strip()
     old_prompt_zh = str(payload.get("gpt_prompt_zh", "")).strip()
 
@@ -391,14 +439,12 @@ def refine_task_prompt(*, task_config_path: Path, console: Console) -> Path:
         refine_instruction = typer.prompt("Natural language refinement instruction (single line)")
     refine_instruction = _clean_multiline_instruction(refine_instruction)
 
-    classes_file = _normalize_input_path(str(payload.get("classes_file", cfg.classes_file)))
     if not classes_file.exists() or not classes_file.is_file():
         console.print(f"[yellow]classes file not found in task:[/yellow] {classes_file}")
         classes_file = _normalize_input_path(typer.prompt("Please input a valid classes file path"))
         if not classes_file.exists() or not classes_file.is_file():
             raise RuntimeError(f"classes file not found: {classes_file}")
         payload["classes_file"] = str(classes_file)
-    images_dir = Path(str(payload.get("images_dir", cfg.images_dir)))
     classes = [
         line.strip()
         for line in classes_file.read_text(encoding="utf-8").splitlines()

@@ -20,12 +20,12 @@ def run_wizard(project_root: Path, console: Console) -> RunConfig:
     if llm_provider not in {"mock", "openai", "opencode"}:
         llm_provider = "mock"
 
-    llm_model = typer.prompt("LLM model", default="gpt-4o-mini")
-    openai_base_url = "https://api.hanbbq.top/v1"
+    llm_model = typer.prompt("LLM model", default="deepseek-v4-pro")
+    openai_base_url = "https://api.deepseek.com"
     if llm_provider == "openai":
         openai_base_url = typer.prompt(
             "OpenAI-compatible base URL",
-            default="https://api.hanbbq.top/v1",
+            default="https://api.deepseek.com",
         )
 
     opencode_executable = "npx"
@@ -38,7 +38,7 @@ def run_wizard(project_root: Path, console: Console) -> RunConfig:
         default="Focus on clear visible objects only. Ignore uncertain tiny objects.",
     )
 
-    detector_backend = typer.prompt("Detector backend (mock/grounding_dino/vlm_api/local_qwen_vl)", default="mock").strip().lower()
+    detector_backend = typer.prompt("Detector backend (mock/grounding_dino/vlm_api/local_qwen_vl)", default="local_qwen_vl").strip().lower()
     if detector_backend not in {"mock", "grounding_dino", "vlm_api", "local_qwen_vl"}:
         detector_backend = "mock"
 

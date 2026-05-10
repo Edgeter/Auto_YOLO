@@ -11,7 +11,8 @@ from autoyolo.adapters.llm_base import LLMAdapter
 class OpenAILLMAdapter(LLMAdapter):
     def __init__(self, model: str, base_url: str | None = None) -> None:
         effective_base_url = base_url or os.getenv("OPENAI_BASE_URL")
-        self.client = OpenAI(base_url=effective_base_url)
+        api_key = os.getenv("DEEPSEEK_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
+        self.client = OpenAI(api_key=api_key or None, base_url=effective_base_url)
         self.model = model
 
     def build_annotation_plan(self, classes: list[str], user_prompt: str) -> dict:
