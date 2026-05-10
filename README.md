@@ -9,6 +9,27 @@ Current status:
 - QC report generation for YOLO labels is implemented.
 - Objective-driven autotune loop is available.
 
+## Primary usage: Agent-style CLI
+
+AutoYOLO is now designed around an agent-style CLI experience, not just single commands.
+
+- The CLI UI is mature enough for day-to-day use (structured panels, context display, step output).
+- `autoyolo assistant` is the primary entrypoint for natural-language operation.
+- The assistant can route intents, execute task-oriented actions, and perform multi-step flows (for example refine -> check).
+- For task workflows, it can display/verify task context first (images/classes/config), then guide execution.
+
+Recommended way to use the project:
+
+```bash
+autoyolo assistant --config autoyolo.yaml
+```
+
+Then communicate in natural language, e.g.:
+- "看看当前任务"
+- "修改 task 1 提示词"
+- "检查 task 1 是否可用"
+- "直接跑一次任务1"
+
 ## Who this is for
 
 AutoYOLO is designed for users who need to bootstrap object-detection datasets quickly with an "AI pre-label + human review" workflow, especially in cold-start scenarios where manual labeling capacity is limited.
@@ -138,6 +159,12 @@ Notes on LLM provider behavior:
 
 ```bash
 autoyolo run --config autoyolo.yaml
+```
+
+For natural-language workflow (recommended), use:
+
+```bash
+autoyolo assistant --config autoyolo.yaml
 ```
 
 Output:
