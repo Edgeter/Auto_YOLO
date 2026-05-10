@@ -9,6 +9,67 @@ Current status:
 - QC report generation for YOLO labels is implemented.
 - Objective-driven autotune loop is available.
 
+## Who this is for
+
+AutoYOLO is designed for users who need to bootstrap object-detection datasets quickly with an "AI pre-label + human review" workflow, especially in cold-start scenarios where manual labeling capacity is limited.
+
+---
+
+## Deployment options (where to run)
+
+This project can be deployed in three common ways:
+
+1. **Local workstation (recommended for data privacy)**
+   - Best for private datasets and iterative prompt tuning.
+   - Supports local model inference backends (for example `local_qwen_vl`) if local hardware is sufficient.
+
+2. **Cloud GPU VM (recommended for speed and batch jobs)**
+   - Suitable when running large image sets or repeated autotune experiments.
+   - Typical platforms: AWS EC2 GPU, GCP Compute Engine GPU, Azure GPU VM, or any equivalent Linux GPU host.
+
+3. **Hybrid mode (local orchestration + remote API inference)**
+   - Run CLI locally, but call remote API models (`openai` / `vlm_api`) for planning and detection.
+   - Useful when local GPU is limited.
+
+---
+
+## Hardware reference (compute requirements)
+
+The exact requirement depends on detector backend, image resolution, and dataset size.
+
+### Minimum usable baseline (small-scale smoke tests)
+
+- CPU: 4 cores
+- RAM: 8 GB
+- GPU: optional (CPU-only can run, but slower)
+- Storage: 5 GB free
+
+### Recommended for practical daily use (medium dataset)
+
+- CPU: 8+ cores
+- RAM: 16-32 GB
+- GPU: NVIDIA GPU with 8-12 GB VRAM
+- Storage: 20+ GB free (cache + outputs + environment)
+
+### Recommended for larger batches / faster turnaround
+
+- CPU: 12+ cores
+- RAM: 32+ GB
+- GPU: NVIDIA GPU with 16+ GB VRAM
+- Storage: SSD with 50+ GB free
+
+Notes:
+- `grounding_dino` first run downloads model weights from Hugging Face and requires additional disk/cache space.
+- If using `vlm_api`, local GPU pressure is much lower, but network latency and API throughput become the bottleneck.
+
+---
+
+## Environment requirements
+
+- Python: `>=3.10`
+- OS: Windows / Linux (Linux preferred for cloud GPU environments)
+- Optional: CUDA-enabled PyTorch for GPU acceleration
+
 ## 1) Install
 
 ```bash
@@ -23,6 +84,8 @@ Install PyTorch (choose command from https://pytorch.org/get-started/locally/):
 ```bash
 pip install torch
 ```
+
+For GPU acceleration, install the CUDA-matched PyTorch build from the official selector.
 
 If using OpenAI provider:
 
@@ -47,6 +110,8 @@ This creates:
 - `reports/`
 - `classes.txt`
 - `autoyolo.yaml`
+
+Place raw input images into `images/`, and ensure class names are correctly defined in `classes.txt`.
 
 ## 3) Interactive setup
 
@@ -114,6 +179,33 @@ Then run:
 ```bash
 autoyolo run --config autoyolo.yaml
 ```
+
+---
+
+## Typical deployment playbooks
+
+### A) Local private workflow
+
+1. Install environment and dependencies.
+2. Run `autoyolo wizard --config autoyolo.yaml`.
+3. Configure local backend (`grounding_dino` or `local_qwen_vl`).
+4. Run `autoyolo run --config autoyolo.yaml`.
+5. Review `reports/qc_report.json` and sampled labels.
+
+### B) Cloud batch workflow
+
+1. Provision Linux GPU VM and install Python/PyTorch.
+2. Clone project and run `pip install -e .`.
+3. Upload images/classes/config.
+4. Run `autoyolo run` or `autoyolo autotune` in batch.
+5. Download `labels/` and `reports/` artifacts for review.
+
+### C) API-first lightweight workflow
+
+1. Keep project local.
+2. Set API keys (`OPENAI_API_KEY`, `VLM_API_KEY`) and base URLs in config.
+3. Use `openai` and/or `vlm_api` backends.
+4. Run pipeline with minimal local compute overhead.
 
 ## 5) Run QC only
 
